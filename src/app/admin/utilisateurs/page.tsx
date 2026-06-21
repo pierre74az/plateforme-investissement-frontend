@@ -3,6 +3,16 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const API = 'http://localhost:3001/api'
+
+const asArray = <T,>(payload: unknown): T[] => {
+  if (Array.isArray(payload)) return payload
+  if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray(payload.data)) {
+    return payload.data as T[]
+  }
+  return []
+}
+
 type User = {
   id: string
   email: string
@@ -26,10 +36,12 @@ export default function AdminUsersPage() {
     if (!token || !u) { router.push('/auth/login'); return }
     if (JSON.parse(u).role !== 'ADMIN') { router.push('/dashboard'); return }
 
-    fetch('http://localhost:3001/api/users', {
+    fetch(`${API}/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
-    }).then(r => r.json()).then(data => { setUsers(data); setLoading(false) })
-  }, [])
+    }).then(r => r.json())
+      .then(data => { setUsers(asArray<User>(data)); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [router])
 
   const filtered = users.filter(u =>
     u.firstName.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,11 +67,9 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto p-8">
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Gestion des investisseurs</h1>
-            <p className="text-gray-500 text-sm mt-1">{users.length} investisseur(s) enregistré(s)</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">Gestion des investisseurs</h1>
+          <p className="text-gray-500 text-sm mt-1">{users.length} investisseur(s) enregistré(s)</p>
         </div>
 
         <div className="bg-white rounded-2xl border overflow-hidden">
@@ -84,9 +94,7 @@ export default function AdminUsersPage() {
                 <tbody>
                   {filtered.map((u, i) => (
                     <tr key={u.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-5 py-4 font-medium text-gray-800">
-                        {u.firstName} {u.lastName}
-                      </td>
+                      <td className="px-5 py-4 font-medium text-gray-800">{u.firstName} {u.lastName}</td>
                       <td className="px-5 py-4 text-gray-500">{u.email}</td>
                       <td className="px-5 py-4">
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${kycBadge[u.kycStatus]}`}>
@@ -95,12 +103,9 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-5 py-4 font-medium">{u.balance.toLocaleString()} FCFA</td>
                       <td className="px-5 py-4 text-center font-bold text-blue-600">{u._count.subs}</td>
-                      <td className="px-5 py-4 text-gray-400">
-                        {new Date(u.createdAt).toLocaleDateString('fr-FR')}
-                      </td>
+                      <td className="px-5 py-4 text-gray-400">{new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
                       <td className="px-5 py-4">
-                        <Link href={`/admin/utilisateurs/${u.id}`}
-                          className="text-xs text-blue-600 hover:underline">
+                        <Link href={`/admin/utilisateurs/${u.id}`} className="text-xs text-blue-600 hover:underline">
                           Voir fiche
                         </Link>
                       </td>

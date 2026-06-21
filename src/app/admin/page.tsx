@@ -3,11 +3,57 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+
+type KycEntry = {
+  status: string
+}
+
+type SubscriptionEntry = {
+  id: string
+  shares: number
+  totalAmount: number
+  createdAt: string
+  user: {
+    firstName: string
+    lastName: string
+    email: string
+  }
+  offering: {
+    name: string
+  }
+}
+
+type OfferingEntry = {
+  id: string
+  name: string
+  sector: string
+  pricePerShare: number
+  soldShares: number
+  totalShares: number
+  isOpen: boolean
+}
+
+const asArray = <T,>(payload: unknown): T[] => {
+  if (Array.isArray(payload)) return payload
+  if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray(payload.data)) {
+    return payload.data as T[]
+  }
+  return []
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
-  const [stats, setStats] = useState<any>(null)
-  const [recentSubs, setRecentSubs] = useState<any[]>([])
-  const [offerings, setOfferings] = useState<any[]>([])
+  const [stats, setStats] = useState<{
+    totalKyc: number
+    pendingKyc: number
+    approvedKyc: number
+    totalSubs: number
+    totalVolume: number
+    totalOfferings: number
+  } | null>(null)
+  const [recentSubs, setRecentSubs] = useState<SubscriptionEntry[]>([])
+  const [offerings, setOfferings] = useState<OfferingEntry[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -17,29 +63,34 @@ export default function AdminDashboard() {
     const user = JSON.parse(u)
     if (user.role !== 'ADMIN') { router.push('/dashboard'); return }
 
+    const headers = { 'Authorization': `Bearer ${token}` }
+
     Promise.all([
-      fetch('http://localhost:3001/api/kyc/all', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
-      fetch('http://localhost:3001/api/subscriptions/all', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
-      fetch('http://localhost:3001/api/offerings').then(r => r.json()),
-    ]).then(([kycs, subs, offs]) => {
+      fetch(`${API}/kyc/all`, { headers }).then(r => r.json()),
+      fetch(`${API}/subscriptions/all`, { headers }).then(r => r.json()),
+      fetch(`${API}/offerings?includeClosed=true`).then(r => r.json()),
+    ]).then(([kycsRaw, subsRaw, offsRaw]) => {
+      const kycs = asArray<KycEntry>(kycsRaw)
+      const subs = asArray<SubscriptionEntry>(subsRaw)
+      const offs = asArray<OfferingEntry>(offsRaw)
       setStats({
         totalKyc: kycs.length,
-        pendingKyc: kycs.filter((k: any) => k.status === 'PENDING').length,
-        approvedKyc: kycs.filter((k: any) => k.status === 'APPROVED').length,
+        pendingKyc: kycs.filter((k) => k.status === 'PENDING').length,
+        approvedKyc: kycs.filter((k) => k.status === 'APPROVED').length,
         totalSubs: subs.length,
-        totalVolume: subs.reduce((a: number, s: any) => a + s.totalAmount, 0),
+        totalVolume: subs.reduce((a, s) => a + s.totalAmount, 0),
         totalOfferings: offs.length,
       })
       setRecentSubs(subs.slice(0, 5))
       setOfferings(offs)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [])
 
   const deleteOffering = async (id: string) => {
     if (!confirm('Supprimer cette offre ?')) return
     const token = localStorage.getItem('token')
-    await fetch(`http://localhost:3001/api/offerings/${id}`, {
+    await fetch(`${API}/offerings/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -48,7 +99,7 @@ export default function AdminDashboard() {
 
   const toggleOffering = async (id: string, isOpen: boolean) => {
     const token = localStorage.getItem('token')
-    const res = await fetch(`http://localhost:3001/api/offerings/${id}`, {
+    const res = await fetch(`${API}/offerings/${id}`, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ isOpen: !isOpen })
@@ -85,7 +136,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {stats?.pendingKyc > 0 && (
+        {stats && stats.pendingKyc > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex justify-between items-center mb-8">
             <div>
               <p className="font-medium text-red-800">{stats.pendingKyc} dossier(s) KYC en attente</p>

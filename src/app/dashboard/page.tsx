@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const API = 'http://localhost:3001/api'
+
 type Sub = {
   id: string
   shares: number
@@ -33,16 +35,16 @@ export default function DashboardPage() {
     const parsedUser = JSON.parse(u)
     setUser(parsedUser)
 
+    const headers = { 'Authorization': `Bearer ${token}` }
+
     Promise.all([
-      fetch('http://localhost:3001/api/subscriptions/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      }).then(r => r.json()),
-      fetch('http://localhost:3001/api/offerings').then(r => r.json()),
+      fetch(`${API}/subscriptions/me`, { headers }).then(r => r.json()),
+      fetch(`${API}/offerings`).then(r => r.json()),
     ]).then(([subsData, offersData]) => {
-      setSubs(subsData)
-      setOffers(offersData.slice(0, 3))
+      setSubs(Array.isArray(subsData) ? subsData : [])
+      setOffers(Array.isArray(offersData) ? offersData.slice(0, 3) : [])
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -84,7 +86,7 @@ export default function DashboardPage() {
             <p className="text-xl font-bold text-green-800">{totalInvesti.toLocaleString()} FCFA</p>
           </div>
           <div className="bg-purple-50 rounded-2xl p-5">
-            <p className="text-xs font-medium text-purple-600 mb-1">Nombre d'actions</p>
+            <p className="text-xs font-medium text-purple-600 mb-1">Nombre d&apos;actions</p>
             <p className="text-xl font-bold text-purple-800">{totalActions.toLocaleString()}</p>
           </div>
           <div className="bg-yellow-50 rounded-2xl p-5">
