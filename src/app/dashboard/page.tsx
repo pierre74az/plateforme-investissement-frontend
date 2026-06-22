@@ -41,7 +41,7 @@ export default function DashboardPage() {
       fetch(`${API}/subscriptions/me`, { headers }).then(r => r.json()),
       fetch(`${API}/offerings`).then(r => r.json()),
     ]).then(([subsData, offersData]) => {
-      setSubs(Array.isArray(subsData) ? subsData : [])
+      setSubs(Array.isArray(subsData) ? subsData : (subsData.data || []))
       setOffers(Array.isArray(offersData) ? offersData.slice(0, 3) : [])
       setLoading(false)
     }).catch(() => setLoading(false))

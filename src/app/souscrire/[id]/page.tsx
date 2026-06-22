@@ -24,7 +24,6 @@ export default function SouscrirePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [user, setUser] = useState<any>(null)
-  const [newBalance, setNewBalance] = useState<number | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -47,36 +46,29 @@ export default function SouscrirePage() {
   const minShares = Math.ceil(offering.minInvest / offering.pricePerShare)
   const totalAmount = shares * offering.pricePerShare
   const remaining = offering.totalShares - offering.soldShares
-  const hasEnoughBalance = user?.balance >= totalAmount
   const kycOk = user?.kycStatus === 'APPROVED'
 
-  const handleSubmit = async () => {
+  const handleCheckout = async () => {
     setSubmitting(true)
     setError('')
     try {
-      const res = await api.post('/subscriptions', { offeringId: offering.id, shares })
-
-      // Mettre à jour le solde dans localStorage
-      const updatedUser = { ...user, balance: res.data.newBalance }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      setUser(updatedUser)
-      setNewBalance(res.data.newBalance)
-      setStep(4)
+      const res = await api.post('/payments/checkout', { offeringId: offering.id, shares })
+      // Redirection vers la page de paiement Stripe
+      window.location.href = res.data.url
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erreur lors de la souscription')
-    } finally {
+      setError(err.response?.data?.error || 'Erreur lors de la création du paiement')
       setSubmitting(false)
     }
   }
 
-  const stepLabel = ['', 'Sélection', 'Vérification', 'Confirmation', 'Succès']
+  const stepLabel = ['', 'Sélection', 'Vérification', 'Paiement Stripe']
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border p-8 w-full max-w-lg">
 
         <div className="flex items-center gap-1 mb-8">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-1 flex-1">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
                 step > s ? 'bg-green-500 text-white' :
@@ -84,7 +76,7 @@ export default function SouscrirePage() {
               }`}>
                 {step > s ? '✓' : s}
               </div>
-              {s < 4 && <div className={`h-0.5 flex-1 ${step > s ? 'bg-green-500' : 'bg-gray-200'}`} />}
+              {s < 3 && <div className={`h-0.5 flex-1 ${step > s ? 'bg-green-500' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
@@ -131,18 +123,18 @@ export default function SouscrirePage() {
                   <p className="text-xs text-gray-500">{kycOk ? 'Votre identité est vérifiée' : 'Complétez votre vérification KYC'}</p>
                 </div>
               </div>
-              <div className={`flex items-center gap-3 p-4 rounded-xl border ${hasEnoughBalance ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                <span className="text-xl">{hasEnoughBalance ? '✅' : '❌'}</span>
-                <div>
-                  <p className="font-medium text-sm">{hasEnoughBalance ? 'Solde suffisant' : 'Solde insuffisant'}</p>
-                  <p className="text-xs text-gray-500">Votre solde : {user?.balance?.toLocaleString()} FCFA — Requis : {totalAmount.toLocaleString()} FCFA</p>
-                </div>
-              </div>
               <div className="flex items-center gap-3 p-4 rounded-xl border border-green-200 bg-green-50">
                 <span className="text-xl">✅</span>
                 <div>
                   <p className="font-medium text-sm">Offre disponible</p>
                   <p className="text-xs text-gray-500">{remaining} actions restantes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50">
+                <span className="text-xl">💳</span>
+                <div>
+                  <p className="font-medium text-sm">Paiement sécurisé par Stripe</p>
+                  <p className="text-xs text-gray-500">Mode test — aucun montant réel ne sera débité</p>
                 </div>
               </div>
             </div>
@@ -151,7 +143,7 @@ export default function SouscrirePage() {
                 className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition">
                 ← Retour
               </button>
-              <button onClick={() => setStep(3)} disabled={!kycOk || !hasEnoughBalance}
+              <button onClick={() => setStep(3)} disabled={!kycOk}
                 className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition">
                 Continuer →
               </button>
@@ -161,7 +153,7 @@ export default function SouscrirePage() {
 
         {step === 3 && (
           <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-6">Confirmer la souscription</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Confirmer et payer</h2>
             <div className="bg-gray-50 rounded-xl p-5 mb-6 space-y-3">
               {[
                 ['Entreprise', offering.name],
@@ -169,7 +161,6 @@ export default function SouscrirePage() {
                 ['Nombre d\'actions', `${shares} actions`],
                 ['Prix unitaire', `${offering.pricePerShare.toLocaleString()} FCFA`],
                 ['Montant total', `${totalAmount.toLocaleString()} FCFA`],
-                ['Solde après', `${(user?.balance - totalAmount).toLocaleString()} FCFA`],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
                   <span className="text-gray-500">{label}</span>
@@ -185,34 +176,9 @@ export default function SouscrirePage() {
                 className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition">
                 ← Retour
               </button>
-              <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 transition">
-                {submitting ? 'Traitement...' : '✔ Confirmer'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="text-center">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Souscription réussie !</h2>
-            <p className="text-gray-500 mb-2">Vous avez souscrit à <strong>{shares} action(s)</strong> de</p>
-            <p className="text-xl font-bold text-blue-600 mb-4">{offering.name}</p>
-            <div className="bg-green-50 rounded-xl p-4 mb-2 text-sm text-green-700">
-              <p>Montant débité : <strong>{totalAmount.toLocaleString()} FCFA</strong></p>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 text-sm text-blue-700">
-              <p>Nouveau solde : <strong>{newBalance?.toLocaleString()} FCFA</strong></p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => router.push('/catalogue')}
-                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition">
-                Catalogue
-              </button>
-              <button onClick={() => router.push('/portefeuille')}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
-                Mon portefeuille →
+              <button onClick={handleCheckout} disabled={submitting}
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition">
+                {submitting ? 'Redirection...' : '💳 Payer avec Stripe'}
               </button>
             </div>
           </div>

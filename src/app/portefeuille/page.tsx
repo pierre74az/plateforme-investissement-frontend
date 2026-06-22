@@ -36,7 +36,7 @@ export default function PortefeuillePage() {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(r => r.json())
-      .then(data => { setSubs(data); setLoading(false) })
+      .then(data => { setSubs(Array.isArray(data) ? data : (data.data || [])); setLoading(false) })
   }, [])
 
   if (loading) return (
