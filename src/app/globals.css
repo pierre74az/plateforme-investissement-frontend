@@ -128,3 +128,14 @@
     @apply font-sans;
   }
 }
+/* ── InvestBF Design Tokens ─────────────────────────────── */
+@theme inline {
+  --color-brand-50:  #F0FDF4;
+  --color-brand-100: #DCFCE7;
+  --color-brand-200: #BBF7D0;
+  --color-brand-400: #4ADE80;
+  --color-brand-600: #16A34A;
+  --color-brand-700: #15803D;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532D;
+}

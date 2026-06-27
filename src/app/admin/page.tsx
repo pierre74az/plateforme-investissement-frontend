@@ -5,238 +5,182 @@ import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
 
-type KycEntry = {
-  status: string
-}
-
-type SubscriptionEntry = {
-  id: string
-  shares: number
-  totalAmount: number
-  createdAt: string
-  user: {
-    firstName: string
-    lastName: string
-    email: string
-  }
-  offering: {
-    name: string
-  }
-}
-
-type OfferingEntry = {
-  id: string
-  name: string
-  sector: string
-  pricePerShare: number
-  soldShares: number
-  totalShares: number
-  isOpen: boolean
-}
-
-const asArray = <T,>(payload: unknown): T[] => {
-  if (Array.isArray(payload)) return payload
-  if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray(payload.data)) {
-    return payload.data as T[]
-  }
-  return []
+type Stats = {
+  totalInvestors: number
+  kycPending: number
+  kycApproved: number
+  kycRejected: number
+  totalSubscriptions: number
+  totalVolume: number
+  activeOfferings: number
 }
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [stats, setStats] = useState<{
-    totalKyc: number
-    pendingKyc: number
-    approvedKyc: number
-    totalSubs: number
-    totalVolume: number
-    totalOfferings: number
-  } | null>(null)
-  const [recentSubs, setRecentSubs] = useState<SubscriptionEntry[]>([])
-  const [offerings, setOfferings] = useState<OfferingEntry[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     const u = localStorage.getItem('user')
     if (!token || !u) { router.push('/auth/login'); return }
-    const user = JSON.parse(u)
-    if (user.role !== 'ADMIN') { router.push('/dashboard'); return }
+    if (JSON.parse(u).role !== 'ADMIN') { router.push('/dashboard'); return }
 
-    const headers = { 'Authorization': `Bearer ${token}` }
-
-    Promise.all([
-      fetch(`${API}/kyc/all`, { headers }).then(r => r.json()),
-      fetch(`${API}/subscriptions/all`, { headers }).then(r => r.json()),
-      fetch(`${API}/offerings?includeClosed=true`).then(r => r.json()),
-    ]).then(([kycsRaw, subsRaw, offsRaw]) => {
-      const kycs = asArray<KycEntry>(kycsRaw)
-      const subs = asArray<SubscriptionEntry>(subsRaw)
-      const offs = asArray<OfferingEntry>(offsRaw)
-      setStats({
-        totalKyc: kycs.length,
-        pendingKyc: kycs.filter((k) => k.status === 'PENDING').length,
-        approvedKyc: kycs.filter((k) => k.status === 'APPROVED').length,
-        totalSubs: subs.length,
-        totalVolume: subs.reduce((a, s) => a + s.totalAmount, 0),
-        totalOfferings: offs.length,
-      })
-      setRecentSubs(subs.slice(0, 5))
-      setOfferings(offs)
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [])
-
-  const deleteOffering = async (id: string) => {
-    if (!confirm('Supprimer cette offre ?')) return
-    const token = localStorage.getItem('token')
-    await fetch(`${API}/offerings/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    setOfferings(prev => prev.filter(o => o.id !== id))
-  }
-
-  const toggleOffering = async (id: string, isOpen: boolean) => {
-    const token = localStorage.getItem('token')
-    const res = await fetch(`${API}/offerings/${id}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isOpen: !isOpen })
-    })
-    const updated = await res.json()
-    setOfferings(prev => prev.map(o => o.id === id ? { ...o, isOpen: updated.isOpen } : o))
-  }
+    fetch(`${API}/users/stats`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { setStats(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [router])
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-400">Chargement...</p>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-[#BBF7D0] border-t-[#15803D] rounded-full animate-spin"></div>
+    </div>
+  )
+
+  if (!stats) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <p className="text-slate-400">Impossible de charger les statistiques</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto p-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-8">Tableau de bord administrateur</h2>
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-5xl mx-auto p-8">
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: 'KYC en attente', value: stats?.pendingKyc, sub: `${stats?.approvedKyc} validés`, bg: 'bg-yellow-50', color: 'text-yellow-800', link: '/admin/kyc' },
-            { label: 'Souscriptions totales', value: stats?.totalSubs, sub: 'tous investisseurs', bg: 'bg-blue-50', color: 'text-blue-800', link: null },
-            { label: 'Volume levé', value: `${stats?.totalVolume?.toLocaleString()} FCFA`, sub: 'cumulé', bg: 'bg-green-50', color: 'text-green-800', link: null },
-            { label: 'Offres actives', value: stats?.totalOfferings, sub: 'sur la plateforme', bg: 'bg-purple-50', color: 'text-purple-800', link: null },
-          ].map(k => (
-            <div key={k.label}
-              className={`${k.bg} rounded-2xl p-5 ${k.link ? 'cursor-pointer hover:opacity-80 transition' : ''}`}
-              onClick={() => k.link && router.push(k.link)}>
-              <p className="text-xs font-medium text-gray-500 mb-1">{k.label}</p>
-              <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
-              <p className="text-xs text-gray-400 mt-1">{k.sub}</p>
-            </div>
-          ))}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-1">Tableau de bord</h1>
+          <p className="text-slate-500 text-sm">Vue d&apos;ensemble de la plateforme InvestBF</p>
         </div>
 
-        {stats && stats.pendingKyc > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex justify-between items-center mb-8">
+        {/* Alerte KYC en attente */}
+        {stats.kycPending > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex justify-between items-center mb-8">
             <div>
-              <p className="font-medium text-red-800">{stats.pendingKyc} dossier(s) KYC en attente</p>
-              <p className="text-sm text-red-600">Des investisseurs attendent la validation de leur identité</p>
+              <p className="font-medium text-amber-800 text-sm">
+                {stats.kycPending} dossier(s) KYC en attente de validation
+              </p>
+              <p className="text-amber-600 text-xs mt-0.5">
+                Des investisseurs attendent la validation de leur identité
+              </p>
             </div>
             <Link href="/admin/kyc"
-              className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition">
-              Traiter maintenant →
+              className="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-amber-600 transition active:scale-[.97] flex-shrink-0">
+              Traiter →
             </Link>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border overflow-hidden mb-8">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h3 className="font-bold text-gray-800">Gestion des offres d'actions</h3>
-            <Link href="/admin/offres/nouveau"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
-              + Ajouter une offre
-            </Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Entreprise', 'Secteur', 'Prix/action', 'Progression', 'Statut', 'Actions'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {offerings.map((o, i) => (
-                  <tr key={o.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-5 py-4 font-medium text-gray-800">{o.name}</td>
-                    <td className="px-5 py-4 text-gray-500">{o.sector}</td>
-                    <td className="px-5 py-4 font-bold text-blue-600">{o.pricePerShare.toLocaleString()} FCFA</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-1.5">
-                          <div className="bg-blue-500 h-1.5 rounded-full"
-                            style={{ width: `${Math.round((o.soldShares / o.totalShares) * 100)}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {Math.round((o.soldShares / o.totalShares) * 100)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${o.isOpen ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {o.isOpen ? 'Ouvert' : 'Fermé'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex gap-2">
-                        <Link href={`/admin/offres/${o.id}`} className="text-xs text-blue-600 hover:underline">Modifier</Link>
-                        <button onClick={() => toggleOffering(o.id, o.isOpen)}
-                          className="text-xs text-yellow-600 hover:underline">
-                          {o.isOpen ? 'Fermer' : 'Ouvrir'}
-                        </button>
-                        <button onClick={() => deleteOffering(o.id)}
-                          className="text-xs text-red-500 hover:underline">Supprimer</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* KPIs principaux */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              label: 'Investisseurs inscrits',
+              value: stats.totalInvestors,
+              icon: '👥',
+              accent: '#16A34A',
+              badge: 'Total',
+              badgeColor: 'bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]',
+            },
+            {
+              label: 'Souscriptions réalisées',
+              value: stats.totalSubscriptions,
+              icon: '📋',
+              accent: '#3B82F6',
+              badge: 'Paiements Stripe',
+              badgeColor: 'bg-blue-50 text-blue-800 border border-blue-200',
+            },
+            {
+              label: 'Volume levé',
+              value: `${stats.totalVolume.toLocaleString()} FCFA`,
+              icon: '💰',
+              accent: '#F59E0B',
+              badge: 'Cumulé',
+              badgeColor: 'bg-amber-50 text-amber-800 border border-amber-200',
+            },
+            {
+              label: 'Offres actives',
+              value: stats.activeOfferings,
+              icon: '📈',
+              accent: '#8B5CF6',
+              badge: 'En cours',
+              badgeColor: 'bg-purple-50 text-purple-800 border border-purple-200',
+            },
+          ].map(k => (
+            <div key={k.label}
+              className="bg-white border border-slate-100 rounded-2xl p-5"
+              style={{ borderLeftWidth: '3px', borderLeftColor: k.accent }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-slate-500">{k.label}</p>
+                <span className="text-xl">{k.icon}</span>
+              </div>
+              <p className="text-xl font-semibold text-slate-900 mb-2">{k.value}</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${k.badgeColor}`}>
+                {k.badge}
+              </span>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-white rounded-2xl border overflow-hidden">
-          <div className="p-6 border-b">
-            <h3 className="font-bold text-gray-800">Dernières souscriptions</h3>
+        {/* KYC détail */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <div className="bg-white border border-slate-100 rounded-2xl p-6">
+            <h3 className="font-semibold text-slate-800 text-sm mb-5">Statut des dossiers KYC</h3>
+            <div className="space-y-4">
+              {[
+                { label: 'Validés', value: stats.kycApproved, color: '#16A34A', bg: 'bg-[#F0FDF4]', text: 'text-[#166534]' },
+                { label: 'En attente', value: stats.kycPending, color: '#F59E0B', bg: 'bg-amber-50', text: 'text-amber-800' },
+                { label: 'Rejetés', value: stats.kycRejected, color: '#EF4444', bg: 'bg-red-50', text: 'text-red-800' },
+              ].map(k => {
+                const total = stats.kycApproved + stats.kycPending + stats.kycRejected
+                const pct = total > 0 ? Math.round((k.value / total) * 100) : 0
+                return (
+                  <div key={k.label}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-sm text-slate-600">{k.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${k.bg} ${k.text}`}>
+                          {k.value} dossier(s)
+                        </span>
+                        <span className="text-xs text-slate-400">{pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, background: k.color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <Link href="/admin/kyc"
+              className="inline-block mt-5 text-xs text-[#15803D] font-medium hover:underline">
+              Gérer les dossiers KYC →
+            </Link>
           </div>
-          {recentSubs.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">Aucune souscription</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Investisseur', 'Offre', 'Actions', 'Montant', 'Date'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentSubs.map((s, i) => (
-                  <tr key={s.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-gray-800">{s.user.firstName} {s.user.lastName}</p>
-                      <p className="text-xs text-gray-400">{s.user.email}</p>
-                    </td>
-                    <td className="px-5 py-4 text-gray-600">{s.offering.name}</td>
-                    <td className="px-5 py-4 font-bold text-blue-600">{s.shares}</td>
-                    <td className="px-5 py-4 font-medium">{s.totalAmount.toLocaleString()} FCFA</td>
-                    <td className="px-5 py-4 text-gray-400">{new Date(s.createdAt).toLocaleDateString('fr-FR')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+
+          {/* Accès rapides */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6">
+            <h3 className="font-semibold text-slate-800 text-sm mb-5">Accès rapides</h3>
+            <div className="space-y-3">
+              {[
+                { href: '/admin/kyc', icon: '🪪', label: 'Valider les dossiers KYC', desc: `${stats.kycPending} en attente`, color: 'hover:border-amber-200 hover:bg-amber-50' },
+                { href: '/admin/utilisateurs', icon: '👥', label: 'Gérer les investisseurs', desc: `${stats.totalInvestors} inscrits`, color: 'hover:border-[#BBF7D0] hover:bg-[#F0FDF4]' },
+                { href: '/admin/offres/nouveau', icon: '➕', label: 'Créer une nouvelle offre', desc: `${stats.activeOfferings} offres actives`, color: 'hover:border-blue-200 hover:bg-blue-50' },
+              ].map(a => (
+                <Link key={a.href} href={a.href}
+                  className={`flex items-center gap-4 p-4 border border-slate-100 rounded-xl transition-all ${a.color}`}>
+                  <span className="text-2xl">{a.icon}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{a.label}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{a.desc}</p>
+                  </div>
+                  <span className="ml-auto text-slate-300 text-sm">→</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

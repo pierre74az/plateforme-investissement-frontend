@@ -1,147 +1,167 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/auth'
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001'
 
 export default function KycPage() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
+  const [kyc, setKyc] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [token, setToken] = useState('')
+  const idCardRef = useRef<HTMLInputElement>(null)
+  const addressRef = useRef<HTMLInputElement>(null)
 
-  const [info, setInfo] = useState({
-    firstName: '', lastName: '', birthDate: '', address: '', profession: '',
-  })
-  const [idCard, setIdCard] = useState<File | null>(null)
-  const [addressDoc, setAddressDoc] = useState<File | null>(null)
+  useEffect(() => {
+    const t = localStorage.getItem('token')
+    if (!t) { router.push('/auth/login'); return }
+    setToken(t)
+    fetch(`${API}/kyc/me`, { headers: { 'Authorization': `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(data => { setKyc(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [router])
 
-  const handleSubmit = async () => {
-    if (!idCard || !addressDoc) {
-      setError('Veuillez uploader les deux documents')
-      return
-    }
-    setLoading(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const idCard = idCardRef.current?.files?.[0]
+    const addressDoc = addressRef.current?.files?.[0]
+    if (!idCard || !addressDoc) { setError('Veuillez sélectionner les deux documents'); return }
+
+    setSubmitting(true)
     setError('')
+    const formData = new FormData()
+    formData.append('idCard', idCard)
+    formData.append('addressDoc', addressDoc)
+
     try {
-      const form = new FormData()
-      form.append('idCard', idCard)
-      form.append('addressDoc', addressDoc)
-      await api.post('/kyc', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await fetch(`${API}/kyc`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
       })
-      router.push('/dashboard?kyc=submitted')
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erreur lors de l\'envoi')
-    } finally {
-      setLoading(false)
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); setSubmitting(false); return }
+      setSuccess(true)
+      setKyc(data)
+    } catch {
+      setError('Erreur lors de l\'envoi')
+      setSubmitting(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border p-8 w-full max-w-lg">
+  const statusConfig: Record<string, { label: string; color: string; icon: string; desc: string }> = {
+    PENDING: { label: 'En attente de validation', color: 'border-amber-200 bg-amber-50', icon: '⏳', desc: 'Votre dossier est en cours d\'examen par notre équipe.' },
+    APPROVED: { label: 'Identité vérifiée', color: 'border-[#BBF7D0] bg-[#F0FDF4]', icon: '✅', desc: 'Votre identité a été validée. Vous pouvez maintenant souscrire aux offres.' },
+    REJECTED: { label: 'Dossier rejeté', color: 'border-red-200 bg-red-50', icon: '❌', desc: 'Votre dossier a été rejeté. Veuillez soumettre de nouveaux documents.' },
+  }
 
-        <div className="flex items-center gap-2 mb-8">
-          {[1, 2].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'
-              }`}>{s}</div>
-              {s < 2 && <div className={`h-0.5 w-16 ${step > s ? 'bg-blue-600' : 'bg-gray-200'}`} />}
-            </div>
-          ))}
-          <span className="text-sm text-gray-500 ml-2">
-            {step === 1 ? 'Informations personnelles' : 'Documents'}
-          </span>
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-[#BBF7D0] border-t-[#15803D] rounded-full animate-spin"></div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-2xl mx-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-slate-900 mb-1">Vérification KYC</h1>
+          <p className="text-slate-500 text-sm">Vérification d&apos;identité obligatoire pour investir</p>
         </div>
 
-        {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Vos informations</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Prénom</label>
-                <input value={info.firstName}
-                  onChange={e => setInfo({ ...info, firstName: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Adama" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Nom</label>
-                <input value={info.lastName}
-                  onChange={e => setInfo({ ...info, lastName: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ouedraogo" />
-              </div>
+        {/* Statut existant */}
+        {kyc && !success && kyc.status !== 'REJECTED' && (
+          <div className={`border-2 rounded-2xl p-6 mb-6 ${statusConfig[kyc.status]?.color}`}>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">{statusConfig[kyc.status]?.icon}</span>
+              <p className="font-semibold text-slate-800">{statusConfig[kyc.status]?.label}</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Date de naissance</label>
-              <input type="date" value={info.birthDate}
-                onChange={e => setInfo({ ...info, birthDate: e.target.value })}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Adresse complète</label>
-              <input value={info.address}
-                onChange={e => setInfo({ ...info, address: e.target.value })}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Secteur 15, Ouagadougou" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Profession</label>
-              <input value={info.profession}
-                onChange={e => setInfo({ ...info, profession: e.target.value })}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ingénieur, Commerçant..." />
-            </div>
-            <button onClick={() => setStep(2)}
-              disabled={!info.firstName || !info.lastName || !info.birthDate || !info.address}
-              className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition mt-2">
-              Continuer →
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-5">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Vos documents</h2>
-
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center">
-              <p className="text-sm font-medium text-gray-700 mb-1">Pièce d'identité</p>
-              <p className="text-xs text-gray-400 mb-3">CNI, passeport ou permis (JPG, PNG, PDF — max 5Mo)</p>
-              <input type="file" accept=".jpg,.jpeg,.png,.pdf"
-                onChange={e => setIdCard(e.target.files?.[0] || null)}
-                className="text-sm text-gray-600" />
-              {idCard && <p className="text-xs text-green-600 mt-2">✔ {idCard.name}</p>}
-            </div>
-
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center">
-              <p className="text-sm font-medium text-gray-700 mb-1">Justificatif de domicile</p>
-              <p className="text-xs text-gray-400 mb-3">Facture d'eau, d'électricité ou quittance (JPG, PNG, PDF — max 5Mo)</p>
-              <input type="file" accept=".jpg,.jpeg,.png,.pdf"
-                onChange={e => setAddressDoc(e.target.files?.[0] || null)}
-                className="text-sm text-gray-600" />
-              {addressDoc && <p className="text-xs text-green-600 mt-2">✔ {addressDoc.name}</p>}
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-600 text-sm">
-                {error}
+            <p className="text-slate-600 text-sm mb-4">{statusConfig[kyc.status]?.desc}</p>
+            {kyc.status === 'APPROVED' && (
+              <div className="grid grid-cols-2 gap-3">
+                <a href={`${API_BASE}${kyc.idCardUrl}?token=${token}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-2 bg-white border border-[#BBF7D0] rounded-xl px-4 py-2.5 text-sm text-[#15803D] hover:bg-[#F0FDF4] transition">
+                  📄 Pièce d&apos;identité
+                </a>
+                <a href={`${API_BASE}${kyc.addressUrl}?token=${token}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-2 bg-white border border-[#BBF7D0] rounded-xl px-4 py-2.5 text-sm text-[#15803D] hover:bg-[#F0FDF4] transition">
+                  🏠 Justificatif domicile
+                </a>
               </div>
             )}
-
-            <div className="flex gap-3">
-              <button onClick={() => setStep(1)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition">
-                ← Retour
-              </button>
-              <button onClick={handleSubmit} disabled={loading || !idCard || !addressDoc}
-                className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition">
-                {loading ? 'Envoi...' : 'Soumettre le dossier'}
-              </button>
-            </div>
           </div>
         )}
+
+        {/* Message succès */}
+        {success && (
+          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-8 text-center mb-6">
+            <div className="text-4xl mb-3">✅</div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">Dossier envoyé !</h2>
+            <p className="text-slate-500 text-sm">Votre dossier KYC est en cours d&apos;examen. Vous serez notifié dès la validation.</p>
+          </div>
+        )}
+
+        {/* Formulaire — si pas de KYC ou rejeté */}
+        {(!kyc || kyc.status === 'REJECTED') && !success && (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8">
+            <h2 className="font-semibold text-slate-800 mb-2">Soumettre votre dossier</h2>
+            <p className="text-slate-500 text-sm mb-6">Fournissez les documents suivants pour valider votre identité.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="idCard" className="block text-sm font-medium text-slate-700 mb-2">
+                  Pièce d&apos;identité <span className="text-red-400">*</span>
+                </label>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-[#16A34A] transition-colors cursor-pointer"
+                  onClick={() => idCardRef.current?.click()}>
+                  <p className="text-2xl mb-1">📄</p>
+                  <p className="text-sm text-slate-600 font-medium">Cliquez pour sélectionner</p>
+                  <p className="text-xs text-slate-400 mt-1">CNI, passeport ou permis de conduire (JPG, PNG, PDF)</p>
+                </div>
+                <input ref={idCardRef} id="idCard" type="file" accept="image/*,.pdf" className="hidden" />
+              </div>
+
+              <div>
+                <label htmlFor="addressDoc" className="block text-sm font-medium text-slate-700 mb-2">
+                  Justificatif de domicile <span className="text-red-400">*</span>
+                </label>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-5 text-center hover:border-[#16A34A] transition-colors cursor-pointer"
+                  onClick={() => addressRef.current?.click()}>
+                  <p className="text-2xl mb-1">🏠</p>
+                  <p className="text-sm text-slate-600 font-medium">Cliquez pour sélectionner</p>
+                  <p className="text-xs text-slate-400 mt-1">Facture d&apos;eau, d&apos;électricité ou relevé bancaire (JPG, PNG, PDF)</p>
+                </div>
+                <input ref={addressRef} id="addressDoc" type="file" accept="image/*,.pdf" className="hidden" />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={submitting}
+                className="w-full bg-[#15803D] text-white py-3 rounded-xl font-semibold hover:bg-[#166534] disabled:opacity-50 transition-all active:scale-[.97]">
+                {submitting ? 'Envoi en cours...' : 'Soumettre mon dossier KYC'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="mt-6 bg-slate-50 border border-slate-100 rounded-2xl p-5">
+          <p className="text-xs font-medium text-slate-600 mb-2">Pourquoi le KYC est-il obligatoire ?</p>
+          <ul className="text-xs text-slate-500 space-y-1">
+            <li>✔ Conformité réglementaire anti-blanchiment</li>
+            <li>✔ Protection des investisseurs</li>
+            <li>✔ Sécurisation des transactions financières</li>
+          </ul>
+        </div>
       </div>
     </div>
   )

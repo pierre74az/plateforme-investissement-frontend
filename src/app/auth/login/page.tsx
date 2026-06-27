@@ -1,68 +1,101 @@
 'use client'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { api, saveAuth } from '@/lib/auth'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
-
-const schema = z.object({
-  email: z.string().email('Email invalide'),
-  password: z.string().min(1, 'Mot de passe requis'),
-})
-
-type FormData = z.infer<typeof schema>
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { register, handleSubmit, formState: { errors, isSubmitting }, setError } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  })
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const onSubmit = async (data: FormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
     try {
-      const res = await api.post('/auth/login', data)
-      saveAuth(res.data.token, res.data.user)
-      router.push('/dashboard')
-    } catch (err: any) {
-      setError('root', { message: err.response?.data?.error || 'Email ou mot de passe incorrect' })
+      const res = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); setLoading(false); return }
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      router.push(data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
+    } catch {
+      setError('Impossible de contacter le serveur')
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Connexion</h1>
-        <p className="text-gray-500 text-sm mb-6">Accédez à votre espace investisseur</p>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">Email</label>
-            <input {...register('email')} type="email"
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="adama@example.com" />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Mot de passe</label>
-            <input {...register('password')} type="password"
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Votre mot de passe" />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-          </div>
-          {errors.root && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-600 text-sm">
-              {errors.root.message}
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-slate-900 font-semibold text-xl mb-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] inline-block"></span>
+            InvestBF
+          </Link>
+          <p className="text-slate-500 text-sm mt-2">Connectez-vous à votre espace</p>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm">
+          <h1 className="text-xl font-semibold text-slate-900 mb-6">Connexion</h1>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                placeholder="votre@email.com"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition"
+              />
             </div>
-          )}
-          <button type="submit" disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition">
-            {isSubmitting ? 'Connexion...' : 'Se connecter'}
-          </button>
-        </form>
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Pas encore de compte ?{' '}
-          <Link href="/auth/register" className="text-blue-600 hover:underline">S'inscrire</Link>
-        </p>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Mot de passe
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#15803D] text-white py-3 rounded-xl font-semibold hover:bg-[#166534] disabled:opacity-50 transition-all active:scale-[.97] mt-2">
+              {loading ? 'Connexion...' : 'Se connecter'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-slate-500 mt-6">
+            Pas encore de compte ?{' '}
+            <Link href="/auth/register" className="text-[#15803D] font-medium hover:underline">
+              S&apos;inscrire
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

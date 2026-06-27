@@ -15,8 +15,7 @@ export default function Navbar() {
   useEffect(() => {
     setMounted(true)
     const u = localStorage.getItem('user')
-    if (u) setUser(JSON.parse(u))
-    else setUser(null)
+    setUser(u ? JSON.parse(u) : null)
   }, [pathname])
 
   if (!mounted) return null
@@ -27,8 +26,11 @@ export default function Navbar() {
 
   if (isPublicPage) {
     return (
-      <nav className="border-b bg-white px-8 py-4 flex justify-between items-center sticky top-0 z-50">
-        <Link href="/" className="font-bold text-blue-600 text-xl">💼 InvestBF</Link>
+      <nav className="bg-white border-b-2 border-[#16A34A] px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <Link href="/" className="flex items-center gap-2 font-semibold text-slate-900 text-lg">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] inline-block"></span>
+          InvestBF
+        </Link>
         <div className="flex items-center gap-6 text-sm">
           {[
             { href: '/', label: 'Accueil' },
@@ -37,21 +39,27 @@ export default function Navbar() {
             { href: '/contact', label: 'Contact' },
           ].map(l => (
             <Link key={l.href} href={l.href}
-              className={`hover:text-blue-600 transition ${pathname === l.href ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+              className={`transition-colors font-medium ${
+                pathname === l.href
+                  ? 'text-[#15803D] border-b-2 border-[#16A34A] pb-0.5'
+                  : 'text-slate-500 hover:text-[#15803D]'
+              }`}>
               {l.label}
             </Link>
           ))}
           {user ? (
             <Link href={isAdmin ? '/admin' : '/dashboard'}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+              className="bg-[#15803D] text-white px-4 py-2 rounded-lg hover:bg-[#166534] transition font-medium text-sm active:scale-[.97]">
               Mon espace →
             </Link>
           ) : (
             <div className="flex items-center gap-3">
-              <Link href="/auth/login" className="text-gray-700 font-medium hover:text-blue-600">Connexion</Link>
+              <Link href="/auth/login" className="text-slate-600 hover:text-[#15803D] transition text-sm font-medium">
+                Connexion
+              </Link>
               <Link href="/auth/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
-                S'inscrire
+                className="bg-[#15803D] text-white px-4 py-2 rounded-lg hover:bg-[#166534] transition font-medium text-sm active:scale-[.97]">
+                S&apos;inscrire
               </Link>
             </div>
           )}
@@ -66,30 +74,44 @@ export default function Navbar() {
     { href: '/admin', label: 'Dashboard' },
     { href: '/admin/kyc', label: 'KYC' },
     { href: '/admin/utilisateurs', label: 'Investisseurs' },
-    { href: '/admin/offres/nouveau', label: '+ Offre' },
+    { href: '/admin/offres', label: 'Offres' },
   ] : [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/catalogue', label: 'Catalogue' },
     { href: '/portefeuille', label: 'Portefeuille' },
+    { href: '/transactions', label: 'Transactions' },
     { href: '/kyc', label: 'Mon KYC' },
     { href: '/profil', label: 'Profil' },
   ]
 
   return (
-    <nav className="bg-white border-b px-6 py-3 flex justify-between items-center sticky top-0 z-50">
-      <Link href={isAdmin ? '/admin' : '/dashboard'} className="font-bold text-blue-600 text-lg">
-        💼 InvestBF {isAdmin && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full ml-1">Admin</span>}
+    <nav className="bg-white border-b border-slate-100 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
+      <Link href={isAdmin ? '/admin' : '/dashboard'}
+        className="flex items-center gap-2 font-semibold text-slate-900 text-base">
+        <span className="w-2 h-2 rounded-full bg-[#16A34A] inline-block"></span>
+        InvestBF
+        {isAdmin && (
+          <span className="text-xs bg-[#F0FDF4] text-[#15803D] px-2 py-0.5 rounded-full font-medium ml-1">
+            Admin
+          </span>
+        )}
       </Link>
       <div className="flex items-center gap-5 text-sm">
         {navLinks.map(l => (
           <Link key={l.href} href={l.href}
-            className={`hover:text-blue-600 transition ${pathname === l.href ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+            className={`transition-colors ${
+              pathname === l.href
+                ? 'text-[#15803D] font-medium'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}>
             {l.label}
           </Link>
         ))}
-        <div className="flex items-center gap-3 ml-2 pl-3 border-l">
-          <span className="text-gray-700 font-medium">{user.firstName}</span>
-          <button onClick={logout} className="text-red-500 hover:underline text-xs">Déconnexion</button>
+        <div className="flex items-center gap-3 ml-2 pl-3 border-l border-slate-200">
+          <span className="text-slate-800 font-medium text-sm">{user.firstName}</span>
+          <button onClick={logout} className="text-red-400 hover:text-red-600 text-xs transition">
+            Déconnexion
+          </button>
         </div>
       </div>
     </nav>
