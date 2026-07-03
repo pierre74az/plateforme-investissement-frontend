@@ -32,6 +32,42 @@ Cette interface intuitive et dynamique permet aux investisseurs de découvrir de
 
 ---
 
+## 📁 Structure du Projet
+
+```text
+plateforme-investissement-frontend/
+├── public/                 # Fichiers publics (favicon, images, etc.)
+└── src/
+    ├── app/                # Pages & Layouts (Next.js App Router)
+    │   ├── about/          # Page À Propos
+    │   ├── admin/          # Espace Administration
+    │   │   ├── kyc/        # Validation des documents KYC
+    │   │   ├── offres/     # Gestion des offres (Création/Modification)
+    │   │   └── utilisateurs/# Liste et gestion des comptes utilisateurs
+    │   ├── auth/           # Authentification (Connexion & Inscription)
+    │   ├── catalogue/      # Liste et détail des offres d'investissement
+    │   ├── contact/        # Page Contact
+    │   ├── dashboard/      # Tableau de bord investisseur (Graphiques)
+    │   ├── faq/            # Foire Aux Questions
+    │   ├── kyc/            # Formulaire de soumission KYC
+    │   ├── portefeuille/   # Suivi des actifs souscrits
+    │   ├── profil/         # Informations personnelles & solde
+    │   ├── souscrire/      # Tunnel d'achat & Redirection Stripe
+    │   ├── transactions/   # Historique des transactions de l'utilisateur
+    │   ├── globals.css     # Styles globaux & variables CSS
+    │   ├── layout.tsx      # Layout racine du site (Navbar & HTML)
+    │   ├── not-found.tsx   # Page 404 customisée
+    │   └── page.tsx        # Page d'accueil publique (Landing Page)
+    ├── components/         # Composants React réutilisables
+    │   ├── ui/             # Composants de base (Button, Card, Input...)
+    │   └── Navbar.tsx      # Barre de navigation globale
+    └── lib/                # Fonctions & Configurations utilitaires
+        ├── auth.ts         # Instance Axios configurée & helpers de tokens
+        └── utils.ts        # Helper de fusion de classes CSS (cn)
+```
+
+---
+
 ## 💻 Démarrage Local
 
 ### Prérequis
