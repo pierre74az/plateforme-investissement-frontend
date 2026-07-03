@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+
 export default function ProfilPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -24,7 +26,7 @@ export default function ProfilPage() {
     setSaving(true)
     const token = localStorage.getItem('token')
     try {
-      const res = await fetch('http://localhost:3001/api/users/me/profile', {
+      const res = await fetch(`${API}/users/me/profile`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
