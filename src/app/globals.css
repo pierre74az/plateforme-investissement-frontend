@@ -133,9 +133,46 @@
   --color-brand-50:  #F0FDF4;
   --color-brand-100: #DCFCE7;
   --color-brand-200: #BBF7D0;
+  --color-brand-300: #86EFAC;
   --color-brand-400: #4ADE80;
+  --color-brand-500: #22C55E;
   --color-brand-600: #16A34A;
   --color-brand-700: #15803D;
   --color-brand-800: #166534;
   --color-brand-900: #14532D;
+
+  --color-gold-50: #FFFDF5;
+  --color-gold-100: #FEF9E6;
+  --color-gold-200: #FDF2C3;
+  --color-gold-300: #FCE897;
+  --color-gold-400: #FBDD6C;
+  --color-gold-500: #FACD35;
+  --color-gold-600: #E6B512;
+  --color-gold-700: #B88E0E;
+  --color-gold-800: #8A6A0B;
+  --color-gold-900: #5C4607;
 }
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+@utility glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+}
+
+@utility hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+

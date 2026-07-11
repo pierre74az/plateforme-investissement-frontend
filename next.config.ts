@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Requis pour le Dockerfile — génère un serveur standalone minimaliste
+  output: "standalone",
 };
 
 export default nextConfig;
+

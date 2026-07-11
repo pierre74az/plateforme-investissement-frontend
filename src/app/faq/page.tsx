@@ -1,34 +1,36 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
+import { ChevronDown, HelpCircle, ArrowRight, MessageCircle } from 'lucide-react'
 
 const faqs = [
   {
     q: "Comment fonctionne InvestBF ?",
-    a: "InvestBF vous permet d'acheter des actions d'entreprises burkinabè. Vous créez un compte, validez votre identité (KYC), choisissez une offre dans le catalogue et payez via Stripe. Votre souscription est enregistrée instantanément."
+    a: "InvestBF vous permet d'acheter des actions d'entreprises burkinabè en toute simplicité. Vous créez votre compte, soumettez vos pièces justificatives (KYC), puis choisissez une opportunité de financement dans notre catalogue. Les paiements s'effectuent de manière sécurisée par carte via l'intégration de Stripe."
   },
   {
     q: "Quel est le montant minimum pour investir ?",
-    a: "Le montant minimum dépend de chaque offre, mais la plupart sont accessibles à partir de 10 000 FCFA. Chaque offre affiche clairement le prix par action et le montant minimum d'investissement."
+    a: "Le ticket d'entrée minimum dépend des besoins de collecte de chaque entreprise, mais la plupart de nos offres partenaires débutent dès 10 000 FCFA. Chaque projet indique clairement le prix unitaire de la part ainsi que le seuil de souscription minimum requis."
   },
   {
-    q: "Qu'est-ce que le KYC ?",
-    a: "Le KYC (Know Your Customer) est une vérification d'identité obligatoire. Vous devez fournir une pièce d'identité et un justificatif de domicile. Une fois validé par notre équipe, vous pouvez souscrire à n'importe quelle offre."
+    q: "Qu'est-ce que la validation KYC ?",
+    a: "Le KYC (Know Your Customer) désigne une vérification d'identité rendue obligatoire par la réglementation financière. Pour valider votre espace investisseur, vous devez fournir une pièce d'identité en cours de validité ainsi qu'un justificatif de domicile récent. Notre équipe analyse et valide vos documents sous 24h."
   },
   {
-    q: "Comment se déroule le paiement ?",
-    a: "Le paiement est sécurisé par Stripe, leader mondial du paiement en ligne. En mode démonstration, utilisez la carte test 4242 4242 4242 4242 avec n'importe quelle date d'expiration future."
+    q: "Le paiement est-il sécurisé ?",
+    a: "Absolument. Nous confions le traitement des transactions à Stripe, leader mondial du paiement en ligne certifié PCI-DSS. Vos données bancaires ne transitent jamais par nos serveurs. Pour les tests de la plateforme, vous pouvez utiliser les numéros de cartes fictives de Stripe."
   },
   {
-    q: "Comment suivre mes investissements ?",
-    a: "Votre tableau de bord affiche en temps réel votre solde, vos souscriptions actives, le nombre d'actions détenues et l'historique de vos transactions. Vous pouvez aussi consulter votre portefeuille détaillé."
+    q: "Comment puis-je suivre mes investissements ?",
+    a: "Dès que votre paiement Stripe est complété, vos actions sont créditées. Depuis votre espace 'Dashboard' ou 'Portefeuille', vous pouvez analyser en direct la répartition sectorielle de vos actifs, le nombre exact de parts détenues, et exporter l'historique complet de vos ordres."
   },
   {
-    q: "Puis-je vendre mes actions ?",
-    a: "Dans la version actuelle (MVP), la revente d'actions n'est pas encore disponible. Cette fonctionnalité est prévue dans la Phase 2 de développement de la plateforme."
+    q: "Puis-je revendre mes actions sur la plateforme ?",
+    a: "Pour cette version initiale (MVP), la revente ou le marché secondaire d'actions n'est pas encore disponible. Il s'agit d'une fonctionnalité complexe prévue dans notre feuille de route de développement à moyen terme."
   },
   {
-    q: "Mes données sont-elles sécurisées ?",
-    a: "Oui. Les mots de passe sont hashés avec bcrypt, les communications sont chiffrées (HTTPS), et les documents KYC sont stockés de façon sécurisée avec accès authentifié uniquement. Les paiements sont gérés directement par Stripe sans transit sur nos serveurs."
+    q: "Quelles sont les mesures de protection des données ?",
+    a: "La sécurité de vos données est notre priorité absolue. Les mots de passe sont hachés via l'algorithme robuste bcrypt, toutes les requêtes sont chiffrées en HTTPS avec TLS 1.3, et les fichiers KYC téléversés sont stockés dans un répertoire sécurisé accessible uniquement par les administrateurs habilités."
   },
 ]
 
@@ -36,64 +38,76 @@ export default function FaqPage() {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50/50 pb-16">
 
       {/* Hero */}
-      <section className="bg-[#F0FDF4] border-b border-[#BBF7D0] px-8 py-16">
-        <div className="max-w-3xl mx-auto text-center">
-          <span className="inline-block bg-[#DCFCE7] text-[#166534] text-xs font-medium px-3 py-1.5 rounded-full mb-4 border border-[#BBF7D0]">
+      <section className="bg-gradient-to-br from-brand-50 via-emerald-50/20 to-white border-b border-brand-100/60 py-16 px-6 text-center">
+        <div className="max-w-3xl mx-auto">
+          <span className="inline-flex items-center gap-1.5 bg-brand-100 text-brand-900 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 border border-brand-200 shadow-sm">
             FAQ
           </span>
-          <h1 className="text-4xl font-semibold text-slate-900 mb-4">Questions fréquentes</h1>
-          <p className="text-slate-500">Tout ce que vous devez savoir sur InvestBF</p>
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">Questions fréquentes</h1>
+          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto">
+            Trouvez rapidement des réponses claires à toutes vos questions concernant le fonctionnement de la plateforme InvestBF.
+          </p>
         </div>
       </section>
 
       {/* Questions */}
-      <section className="max-w-3xl mx-auto px-8 py-16">
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <div key={i}
-              className={`border rounded-2xl overflow-hidden transition-all ${
-                open === i ? 'border-[#BBF7D0]' : 'border-slate-100'
-              }`}>
-              <button
-                onClick={() => setOpen(open === i ? null : i)}
-                className="w-full flex justify-between items-center px-6 py-4 text-left bg-white hover:bg-slate-50 transition-colors">
-                <span className="font-medium text-slate-800 text-sm pr-4">{faq.q}</span>
-                <span className={`text-[#15803D] text-lg flex-shrink-0 transition-transform ${open === i ? 'rotate-45' : ''}`}>
-                  +
-                </span>
-              </button>
-              {open === i && (
-                <div className="px-6 pb-5 bg-[#F0FDF4] border-t border-[#BBF7D0]">
-                  <p className="text-slate-600 text-sm leading-relaxed pt-4">{faq.a}</p>
+      <section className="max-w-3xl mx-auto px-6 py-16">
+        <div className="space-y-4">
+          {faqs.map((faq, i) => {
+            const isOpen = open === i
+            return (
+              <div
+                key={i}
+                className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${
+                  isOpen ? 'border-brand-300 shadow-sm' : 'border-slate-100 shadow-sm hover:border-slate-200'
+                }`}
+              >
+                <button
+                  onClick={() => setOpen(isOpen ? null : i)}
+                  className="w-full flex justify-between items-center px-6 py-5 text-left transition-colors duration-200"
+                >
+                  <span className="font-bold text-slate-800 text-sm sm:text-base pr-4 flex items-center gap-2.5">
+                    <HelpCircle className={`w-5 h-5 flex-shrink-0 ${isOpen ? 'text-brand-600' : 'text-slate-400'}`} />
+                    {faq.q}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform duration-300 ${
+                      isOpen ? 'rotate-180 text-brand-600' : ''
+                    }`}
+                  />
+                </button>
+                <div
+                  className={`transition-all duration-300 ease-in-out ${
+                    isOpen ? 'max-h-72 opacity-100 border-t border-brand-50 bg-brand-50/10' : 'max-h-0 opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <p className="px-6 py-5 text-slate-600 text-sm leading-relaxed">{faq.a}</p>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
 
-        <div className="mt-12 text-center bg-slate-50 border border-slate-100 rounded-2xl p-8">
-          <p className="text-slate-600 font-medium mb-2">Vous avez une autre question ?</p>
-          <p className="text-slate-500 text-sm mb-4">Notre équipe est disponible pour vous aider</p>
-          <a href="/contact"
-            className="inline-block bg-[#15803D] text-white px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-[#166534] transition-all active:scale-[.97]">
-            Nous contacter →
-          </a>
+        {/* Contact CTA */}
+        <div className="mt-16 text-center bg-white border border-slate-100 rounded-3xl p-8 sm:p-10 shadow relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-brand-100/30 rounded-full filter blur-xl"></div>
+          <div className="w-12 h-12 rounded-2xl bg-brand-50 border border-brand-100 text-brand-700 flex items-center justify-center mx-auto mb-5 shadow-sm">
+            <MessageCircle className="w-6 h-6" />
+          </div>
+          <p className="text-slate-800 font-extrabold text-base sm:text-lg mb-2">Vous ne trouvez pas votre réponse ?</p>
+          <p className="text-slate-500 text-xs sm:text-sm mb-6 max-w-md mx-auto">Notre support technique et commercial est disponible pour vous accompagner pas à pas.</p>
+          <Link
+            href="/contact"
+            className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:scale-[1.01] active:scale-[0.98] inline-flex items-center gap-2 shadow"
+          >
+            Nous contacter <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-100 px-8 py-8 bg-slate-50">
-        <div className="max-w-5xl mx-auto flex justify-between items-center text-sm text-slate-400">
-          <span>© 2026 InvestBF — Tous droits réservés</span>
-          <div className="flex gap-6">
-            <a href="/about" className="hover:text-slate-600 transition">À propos</a>
-            <a href="/contact" className="hover:text-slate-600 transition">Contact</a>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }
