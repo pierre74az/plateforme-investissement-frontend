@@ -45,12 +45,18 @@ export default function AdminDashboard() {
     }
 
     fetch(`${API}/users/stats`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Stats failed')
+        return r.json()
+      })
       .then(data => {
         setStats(data)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        setStats(null)
+        setLoading(false)
+      })
   }, [router])
 
   if (loading) {
@@ -80,7 +86,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* KYC Alert Banner */}
-      {stats.kycPending > 0 && (
+      {(stats.kycPending ?? 0) > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm animate-in fade-in duration-300">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-100/70 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0">
@@ -107,28 +113,28 @@ export default function AdminDashboard() {
         {[
           {
             label: 'Investisseurs inscrits',
-            value: stats.totalInvestors,
+            value: stats.totalInvestors ?? 0,
             icon: Users,
             iconColor: 'text-brand-700 bg-brand-50 border border-brand-100',
             badge: 'Inscriptions'
           },
           {
             label: 'Souscriptions faites',
-            value: stats.totalSubscriptions,
+            value: stats.totalSubscriptions ?? 0,
             icon: FileCheck2,
             iconColor: 'text-blue-700 bg-blue-50 border border-blue-100',
             badge: 'Titres émis'
           },
           {
             label: 'Volume total levé',
-            value: `${stats.totalVolume.toLocaleString()} FCFA`,
+            value: `${(stats.totalVolume ?? 0).toLocaleString()} FCFA`,
             icon: Coins,
             iconColor: 'text-amber-700 bg-amber-50 border border-amber-100',
             badge: 'Fonds collectés'
           },
           {
             label: 'Offres actives',
-            value: stats.activeOfferings,
+            value: stats.activeOfferings ?? 0,
             icon: TrendingUp,
             iconColor: 'text-purple-700 bg-purple-50 border border-purple-100',
             badge: 'Campagnes actives'
@@ -166,11 +172,11 @@ export default function AdminDashboard() {
             <h3 className="font-extrabold text-slate-800 text-sm tracking-wider uppercase mb-6">Dossiers Réglementaires</h3>
             <div className="space-y-5">
               {[
-                { label: 'Validés', value: stats.kycApproved, color: '#16A34A', bg: 'bg-brand-50 border border-brand-100 text-brand-800' },
-                { label: 'En attente', value: stats.kycPending, color: '#F59E0B', bg: 'bg-amber-50 border border-amber-100 text-amber-800' },
-                { label: 'Rejetés', value: stats.kycRejected, color: '#EF4444', bg: 'bg-rose-50 border border-rose-100 text-rose-800' },
+                { label: 'Validés', value: stats.kycApproved ?? 0, color: '#16A34A', bg: 'bg-brand-50 border border-brand-100 text-brand-800' },
+                { label: 'En attente', value: stats.kycPending ?? 0, color: '#F59E0B', bg: 'bg-amber-50 border border-amber-100 text-amber-800' },
+                { label: 'Rejetés', value: stats.kycRejected ?? 0, color: '#EF4444', bg: 'bg-rose-50 border border-rose-100 text-rose-800' },
               ].map((k, idx) => {
-                const total = stats.kycApproved + stats.kycPending + stats.kycRejected
+                const total = (stats.kycApproved ?? 0) + (stats.kycPending ?? 0) + (stats.kycRejected ?? 0)
                 const pct = total > 0 ? Math.round((k.value / total) * 100) : 0
                 return (
                   <div key={idx}>
@@ -186,7 +192,7 @@ export default function AdminDashboard() {
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${pct}%`, backgroundColor: k.color } as React.CSSProperties}
+                        style={{ width: `${pct}%`, backgroundColor: k.color } as React.CSSProperties}
                       />
                     </div>
                   </div>
@@ -214,14 +220,14 @@ export default function AdminDashboard() {
                 href: '/admin/kyc',
                 icon: ShieldCheck,
                 label: 'Valider les dossiers KYC',
-                desc: `${stats.kycPending} dossier(s) en attente de vérification`,
+                desc: `${stats.kycPending ?? 0} dossier(s) en attente de vérification`,
                 color: 'hover:border-amber-300 hover:bg-amber-50/20'
               },
               {
                 href: '/admin/utilisateurs',
                 icon: Users,
                 label: 'Gérer les investisseurs',
-                desc: `${stats.totalInvestors} utilisateurs enregistrés`,
+                desc: `${stats.totalInvestors ?? 0} utilisateurs enregistrés`,
                 color: 'hover:border-brand-300 hover:bg-brand-50/20'
               },
               {
