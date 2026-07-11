@@ -34,6 +34,21 @@ export default function ProfilPage() {
     const parsed = JSON.parse(u)
     setUser(parsed)
     setForm({ firstName: parsed.firstName, lastName: parsed.lastName })
+
+    fetch(`${API}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => {
+      if (r.ok) return r.json()
+      return null
+    })
+    .then(freshUser => {
+      if (freshUser) {
+        setUser(freshUser)
+        setForm({ firstName: freshUser.firstName, lastName: freshUser.lastName })
+        localStorage.setItem('user', JSON.stringify(freshUser))
+      }
+    })
   }, [router])
 
   const save = async () => {

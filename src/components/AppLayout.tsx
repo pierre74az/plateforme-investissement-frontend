@@ -39,8 +39,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
+    const token = localStorage.getItem('token')
     const u = localStorage.getItem('user')
-    setUser(u ? JSON.parse(u) : null)
+    if (u) {
+      setUser(JSON.parse(u))
+    } else {
+      setUser(null)
+    }
+
+    if (token) {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+      fetch(`${API}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error('Unauthorized')
+      })
+      .then(freshUser => {
+        setUser(freshUser)
+        localStorage.setItem('user', JSON.stringify(freshUser))
+      })
+      .catch(() => {})
+    }
+
     setMobileMenuOpen(false) // Fermer le menu mobile lors d'un changement de page
   }, [pathname])
 

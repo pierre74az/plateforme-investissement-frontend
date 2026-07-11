@@ -76,10 +76,18 @@ export default function DashboardPage() {
     Promise.all([
       fetch(`${API}/subscriptions/me`, { headers }).then(r => r.json()),
       fetch(`${API}/offerings`).then(r => r.json()),
-    ]).then(([subsData, offersData]) => {
+      fetch(`${API}/auth/me`, { headers }).then(r => {
+        if (r.ok) return r.json()
+        return null
+      }),
+    ]).then(([subsData, offersData, freshUser]) => {
       const subsArr = Array.isArray(subsData) ? subsData : (subsData.data || [])
       setSubs(subsArr)
       setOffers(Array.isArray(offersData) ? offersData.slice(0, 3) : [])
+      if (freshUser) {
+        setUser(freshUser)
+        localStorage.setItem('user', JSON.stringify(freshUser))
+      }
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [router])
