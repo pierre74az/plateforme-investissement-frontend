@@ -28,7 +28,7 @@ export default function RegisterPage() {
         setLoading(false)
         return
       }
-      localStorage.setItem('token', data.token)
+      localStorage.setItem('token', data.accessToken)
       localStorage.setItem('user', JSON.stringify(data.user))
       router.push('/dashboard')
     } catch {

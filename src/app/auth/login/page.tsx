@@ -28,7 +28,7 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      localStorage.setItem('token', data.token)
+      localStorage.setItem('token', data.accessToken)
       localStorage.setItem('user', JSON.stringify(data.user))
       router.push(data.user.role === 'ADMIN' ? '/admin' : '/dashboard')
     } catch {
